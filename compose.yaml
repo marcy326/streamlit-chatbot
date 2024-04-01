@@ -1,0 +1,13 @@
+services:
+  app:
+    container_name: chatbot
+    build: .
+    volumes:
+      - .:/app
+      - .streamlit:${HOME}/.streamlit:ro
+    working_dir: /app
+    env_file:
+      - .env
+    ports:
+      - 8501:8501
+    command: streamlit run app.py
