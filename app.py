@@ -13,13 +13,6 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from llm import LLM
 
 
-# def get_state(): 
-#     if "state" not in st.session_state: 
-#         st.session_state.state = {"memory": ConversationBufferMemory(return_messages=True, memory_key="chat_history")} 
-#         st.session_state.state["memory"].chat_memory.add_user_message("私の名前はmarcyです")
-#         st.session_state.state["memory"].chat_memory.add_ai_message("marcyさんですね。よろしくお願いします。")
-#     return st.session_state.state
-
 st.title("marcy's ChatBot")
 
 # 定数定義
@@ -30,7 +23,6 @@ MODEL="gpt-3.5-turbo"
 SYSTEM="必ず日本語で返答してください。"
 MAX_TOKENS=2048
 
-# uploaded_file = st.file_uploader("Upload a file after paste OpenAI API key", type="pdf")
 # チャットログを保存したセッション情報を初期化
 if "chat_log" not in st.session_state:
     st.session_state.chat_log = []
@@ -54,17 +46,13 @@ with st.sidebar:
     PROVIDER = select_provider
     if PROVIDER == "OpenAI":
         select_model = st.selectbox("Model", ["gpt-3.5-turbo", "gpt-4-1106-preview"])
-        # ChatModel = ChatOpenAI
     else:
         select_model = st.selectbox("Model", ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"])
-        # ChatModel = ChatAnthropic
     MODEL = select_model
     MAX_TOKENS = st.select_slider("Max Tokens", options=[128, 256, 512, 1024, 2048, 4096], value=1024)
     select_temperature = st.slider("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1,)
     # select_chunk_size = st.slider("Chunk", min_value=0.0, max_value=1000.0, value=300.0, step=10.0,)
 
-
-    
 llm = LLM(session_state=st.session_state, model_provider=PROVIDER, model_name=MODEL, temperature=select_temperature, system_message=SYSTEM)
 
 # 以前のチャットログを表示
