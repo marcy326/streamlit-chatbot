@@ -1,5 +1,6 @@
-
 from operator import itemgetter
+
+from streamlit.runtime.state import SessionStateProxy
 
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
@@ -9,24 +10,23 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 
 class LLM:
-    def __init__(self, session_state, model_provider="OpenAI", model_name="gpt-3.5-turbo", temperature=0, system_message=""):
+    def __init__(self, session_state:SessionStateProxy, model_provider="OpenAI", model_name="gpt-3.5-turbo", temperature=0, system_message=""):
         self.model_provider = model_provider
         self.model_name = model_name
         self.temperature = temperature
         self.system_message = system_message
         self.session_state = session_state
-        self.state = self.__get_state()
+        self.__init_state()
         self.prompt = self.__setting_prompt()
         self.model = self.__setting_model()
         self.chain = self.__setting_chain()
     
-    def __get_state(self): 
+    def __init_state(self): 
         session_state = self.session_state
         if "state" not in session_state: 
-            session_state.state = {"memory": ConversationBufferMemory(return_messages=True, memory_key="chat_history")} 
-            session_state.state["memory"].chat_memory.add_user_message("私の名前はmarcyです")
-            session_state.state["memory"].chat_memory.add_ai_message("marcyさんですね。よろしくお願いします。")
-        return session_state.state
+            self.state = {"memory": ConversationBufferMemory(return_messages=True, memory_key="chat_history")}
+            for human_message, ai_message in zip(session_state.chat_log[::2], session_state.chat_log[1::2]):
+                self.save_memory(human_message["message"], ai_message["message"])
     
     def __setting_prompt(self):
         prompt = ChatPromptTemplate.from_messages([
@@ -68,5 +68,3 @@ class LLM:
     def load_memory(self):
         state = self.state
         return state['memory'].load_memory_variables({})
-    
-

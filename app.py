@@ -11,7 +11,7 @@ from langchain.schema import HumanMessage, AIMessage
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 from llm import LLM
-
+from database import save_message, load_messages
 
 st.title("marcy's ChatBot")
 
@@ -23,9 +23,9 @@ MODEL="gpt-3.5-turbo"
 SYSTEM="必ず日本語で返答してください。"
 MAX_TOKENS=2048
 
-# チャットログを保存したセッション情報を初期化
-if "chat_log" not in st.session_state:
-    st.session_state.chat_log = []
+# データベースから会話履歴を読み込み、session_stateに保存
+if 'chat_log' not in st.session_state:
+    st.session_state.chat_log = load_messages()
     
 with st.sidebar:
     user_openai_api_key = st.text_input(
@@ -57,10 +57,10 @@ llm = LLM(session_state=st.session_state, model_provider=PROVIDER, model_name=MO
 
 # 以前のチャットログを表示
 for chat in st.session_state.chat_log:
-        with st.chat_message(chat["name"]):
-            st.write(chat["msg"])
+        with st.chat_message(chat["sender"]):
+            st.write(chat["message"])
 
-            if chat["caption"] is not None:
+            if chat["caption"] != "":
                 st.caption(chat["caption"])
 
 if user_msg := st.chat_input("ここにメッセージを入力"):
@@ -69,7 +69,6 @@ if user_msg := st.chat_input("ここにメッセージを入力"):
     with st.chat_message(USER_NAME):
         st.write(user_msg)
 
-    user_input = [HumanMessage(content=user_msg)]
     with st.chat_message(ASSISTANT_NAME):
         assistant_msg = ""
         assistant_response_area = st.empty()
@@ -78,10 +77,11 @@ if user_msg := st.chat_input("ここにメッセージを入力"):
             assistant_response_area.write(assistant_msg + "▌")
         assistant_response_area.write(assistant_msg)
         t = time()-t0
-        caption = f"time: {t:.1f}s, model: {select_model}"
+        caption = f"time: {t:.1f}s, model: {select_model}, memory: {llm.load_memory()}"
         st.caption(caption)
 
     # セッションにチャットログを追加
-    st.session_state.chat_log.append({"name": USER_NAME, "msg": user_msg, "caption": None})
-    st.session_state.chat_log.append({"name": ASSISTANT_NAME, "msg": assistant_msg, "caption": caption})
-    llm.save_memory(user_msg, assistant_msg)
+    st.session_state.chat_log.append({"sender": USER_NAME, "message": user_msg, "caption": ""})
+    st.session_state.chat_log.append({"sender": ASSISTANT_NAME, "message": assistant_msg, "caption": caption})
+    save_message(USER_NAME, user_msg, "")
+    save_message(ASSISTANT_NAME, assistant_msg, caption)
