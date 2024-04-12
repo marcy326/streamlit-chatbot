@@ -97,3 +97,12 @@ def get_summary(conversation_id):
     if message and message.summary:
         return message.summary
     return None
+
+def delete_conversation(conversation_id):
+    """指定された会話IDの会話を削除する。"""
+    session = Session()
+    messages_to_delete = session.query(Message).filter(Message.conversation_id == conversation_id).all()
+    for message in messages_to_delete:
+        session.delete(message)
+    session.commit()
+    session.close()

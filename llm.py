@@ -85,34 +85,6 @@ class LLM:
         # メモリのリセット
         self.state["memory"].clear()
 
-
-# def summarize(session_state:SessionStateProxy):
-#     system_message = """
-#     ルール：
-#     - 会話の見出しとして使用するため、要約の結果のみを20トークン以内で簡潔に出力してください。
-#     - 会話履歴にトピックが複数含まれている場合にはそれらから1~2個抽出して一つのテーマとして抽象化して上で要約してください。
-#     - "について"という言葉で締めてください。
-#     - 返事など余分な言葉は出力しないでください。
-#     - 会話履歴と含まれない内容を出力しないでください。
-
-#     出力例: 
-#     - "MLOpsの概要と実装例について"
-#     ポイント: 
-#     - 余分な言葉が含まれていない。
-#     - 30トークン以内で簡潔である。
-#     - 文章ではなく、見出しのような終わり方をしている。
-#     NG例: 
-#     - "会話の要約: 自己紹介と簡単な挨拶、MLOpsの概要と実装例について、AIを仕事にするためにはどうすればいいか述べた。"
-#     NG理由: 
-#     - "会話の要約: "という余分な言葉が含まれている。
-#     - 30トークンを超えており、見出しとして長すぎる。
-#     - "述べた。"というように文章になっている。
-#     """
-#     user_message = "会話履歴からどのような会話をしているか要約してください。"
-#     llm = LLM(session_state=session_state, model_provider="Anthropic", model_name="claude-3-haiku-20240307", temperature=0, system_message=system_message)
-#     summary = llm.invoke(user_message).content
-#     return summary
-
 _system_message = """
     ルール：
     - 会話の見出しとして使用するため、要約の結果のみを20文字以内で簡潔に出力してください。
