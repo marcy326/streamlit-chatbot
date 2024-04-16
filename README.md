@@ -28,7 +28,7 @@ cd streamlit-chatbot-app
 To run the application locally, execute the following command:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 This command will build the Docker image and start the application container. You can access the deployed application at http://localhost:8501.
 
