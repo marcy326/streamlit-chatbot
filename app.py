@@ -66,7 +66,8 @@ def process_user_input(user_input, llm):
             assistant_response_area.write(assistant_msg + "▌")
         assistant_response_area.write(assistant_msg)
         end_time = time()
-        caption = f"Time: {end_time - start_time:.2f}s, Model: {llm.model_name}, Memory: {llm.load_memory()}"
+        # caption = f"Time: {end_time - start_time:.2f}s, Model: {llm.model_name}, Memory: {llm.load_memory()}"
+        caption = f"Time: {end_time - start_time:.2f}s, Model: {llm.model_name}"
         st.caption(caption)
     return assistant_msg, caption
 
@@ -87,8 +88,10 @@ def setup_sidebar():
         global OPENAI_API_KEY, ANTHROPIC_API_KEY, PROVIDER, MODEL, MAX_TOKENS, select_temperature
         user_openai_api_key = st.sidebar.text_input("OpenAI API key", OPENAI_API_KEY, type="password")
         user_anthropic_api_key = st.sidebar.text_input("Anthropic API key", ANTHROPIC_API_KEY, type="password")
-        OPENAI_API_KEY = user_openai_api_key
-        ANTHROPIC_API_KEY = user_anthropic_api_key
+        os.environ["OPENAI_API_KEY"] = user_openai_api_key
+        os.environ["ANTHROPIC_API_KEY"] = user_anthropic_api_key
+        OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+        ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
         PROVIDER = st.sidebar.selectbox("Provider", ["OpenAI", "Anthropic"], index=1)
         if PROVIDER == "OpenAI":
             MODEL = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4-1106-preview"])
@@ -105,8 +108,8 @@ def display_conversation_history():
             formatted_timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
             with st.container(border=True):
                 st.subheader(formatted_timestamp, divider="rainbow")
-                summary = get_summary(conversation_id) or "No summary available"
-                st.write(summary)
+                # summary = get_summary(conversation_id) or "No summary available"
+                # st.write(summary)
                 if st.button("Load Chat", key=f"load-{conversation_id}"):
                     st.session_state.selected_conversation_id = conversation_id
 
@@ -127,7 +130,7 @@ def user_interaction(conversation_id, llm):
         assistant_msg, caption = process_user_input(user_msg, llm)
         save_messages(user_msg, assistant_msg, caption, conversation_id)
         # 要約とその保存
-        summarize_and_save(conversation_id, llm)
+        # summarize_and_save(conversation_id, llm)
 
 def summarize_and_save(conversation_id, llm):
     """会話内容から要約を生成し、保存"""
