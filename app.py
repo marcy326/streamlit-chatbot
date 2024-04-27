@@ -88,10 +88,12 @@ def setup_sidebar():
         global OPENAI_API_KEY, ANTHROPIC_API_KEY, PROVIDER, MODEL, MAX_TOKENS, select_temperature
         user_openai_api_key = st.sidebar.text_input("OpenAI API key", OPENAI_API_KEY, type="password")
         user_anthropic_api_key = st.sidebar.text_input("Anthropic API key", ANTHROPIC_API_KEY, type="password")
-        os.environ["OPENAI_API_KEY"] = user_openai_api_key
-        os.environ["ANTHROPIC_API_KEY"] = user_anthropic_api_key
-        OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-        ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+        if user_openai_api_key is not None:
+            os.environ["OPENAI_API_KEY"] = user_openai_api_key
+            OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+        if user_anthropic_api_key is not None:
+            os.environ["ANTHROPIC_API_KEY"] = user_anthropic_api_key
+            ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
         PROVIDER = st.sidebar.selectbox("Provider", ["OpenAI", "Anthropic"], index=1)
         if PROVIDER == "OpenAI":
             MODEL = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4-1106-preview"])
