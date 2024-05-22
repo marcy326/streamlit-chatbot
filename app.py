@@ -96,7 +96,7 @@ def setup_sidebar():
             ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
         PROVIDER = st.sidebar.selectbox("Provider", ["OpenAI", "Anthropic"], index=1)
         if PROVIDER == "OpenAI":
-            MODEL = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4-1106-preview"])
+            MODEL = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4o", "gpt-4-turbo"])
         else:
             MODEL = st.sidebar.selectbox("Model", ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"])
         MAX_TOKENS = st.sidebar.select_slider("Max Tokens", options=[128, 256, 512, 1024, 2048, 4096], value=1024)
