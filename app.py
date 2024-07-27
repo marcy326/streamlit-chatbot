@@ -2,6 +2,7 @@
 import os
 from time import time
 import uuid
+import yaml
 
 import streamlit as st
 
@@ -29,6 +30,26 @@ def main():
         process_conversation(conversation_id, llm)
     else:
         st.write("""サイドバーから"New Chat"をクリックするか、"History"を開き、過去の会話を選択してください。""")
+
+def load_model_config():
+    """model.yamlからモデル設定を読み込む"""
+    try:
+        with open('models.yaml', 'r') as file:
+            config = yaml.safe_load(file)
+            return config
+    except FileNotFoundError:
+        st.error("models.yamlファイルが見つかりません。")
+        return None
+
+def create_provider_and_model_lists(models_config):
+    """プロバイダリストとモデルのリストを作成する"""
+    if models_config is None:
+        return [], []
+
+    providers = list(models_config.keys())
+    model_list = {provider: models for provider, models in models_config.items()}
+
+    return providers, model_list
 
 def handle_new_conversation():
     """新規会話の処理"""
@@ -83,6 +104,12 @@ def initialize_session_state():
         st.session_state.selected_conversation_id = 'default'
 
 def setup_sidebar():
+    model_config = load_model_config()
+    if model_config is not None:
+        providers, models = create_provider_and_model_lists(model_config)
+        st.write("モデル設定が正常に読み込まれました。")
+    else:
+        st.error("モデル設定の読み込みに失敗しました。")
     with st.sidebar:
         display_conversation_history()
         global OPENAI_API_KEY, ANTHROPIC_API_KEY, PROVIDER, MODEL, MAX_TOKENS, select_temperature
@@ -94,13 +121,10 @@ def setup_sidebar():
         if user_anthropic_api_key is not None:
             os.environ["ANTHROPIC_API_KEY"] = user_anthropic_api_key
             ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-        PROVIDER = st.sidebar.selectbox("Provider", ["OpenAI", "Anthropic"], index=1)
-        if PROVIDER == "OpenAI":
-            MODEL = st.sidebar.selectbox("Model", ["gpt-3.5-turbo", "gpt-4o", "gpt-4-turbo"])
-        else:
-            MODEL = st.sidebar.selectbox("Model", ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"])
-        MAX_TOKENS = st.sidebar.select_slider("Max Tokens", options=[128, 256, 512, 1024, 2048, 4096], value=1024)
-        select_temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
+        PROVIDER = st.sidebar.selectbox("Provider", providers, index=1)
+        for provider in providers:
+            if PROVIDER == provider:
+                MODEL = st.sidebar.selectbox("Model", models[provider])
 
 def display_conversation_history():
     if st.button("New Chat", key="new"):
@@ -141,6 +165,7 @@ def summarize_and_save(conversation_id, llm):
     saved_summary = summarize(llm.load_memory())
     save_summary(saved_summary, conversation_id)
     st.rerun()
+
 
 if __name__ == "__main__":
     main()
