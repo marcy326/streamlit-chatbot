@@ -6,7 +6,7 @@ from streamlit.runtime.state import SessionStateProxy
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 USER_NAME = "user"
@@ -19,7 +19,7 @@ class LLM:
         self.temperature = temperature
         self.system_message = system_message
         # ここでメモリの初期化を行う
-        self.state = {"memory": ConversationBufferMemory(return_messages=True, memory_key="chat_history")}
+        self.state = {"memory": ConversationBufferWindowMemory(k=10, return_messages=True, memory_key="chat_history")}
         self.prompt = self.__setting_prompt()
         self.model = self.__setting_model()
         self.chain = self.__setting_chain()
@@ -98,7 +98,7 @@ _system_message = """
     - 会話履歴と含まれない内容を出力しないでください。
     """
 
-def summarize(conversation_text, model_provider="Anthropic", model_name="claude-3-haiku-20240307", temperature=0, system_message=_system_message):
+def summarize(conversation_text, model_provider="OpenAI", model_name="gpt-4o-mini", temperature=0, system_message=_system_message):
     """
     会話テキストから要約を生成する。
     """
