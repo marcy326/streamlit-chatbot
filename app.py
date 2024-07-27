@@ -7,7 +7,7 @@ import yaml
 import streamlit as st
 
 from llm import LLM, summarize
-from database import get_conversations, save_message, load_messages_by_conversation_id, save_summary, get_summary, delete_conversation
+from database import get_conversations, save_message, load_messages_by_conversation_id, save_summary, get_summary, delete_conversation, get_user, get_user_id, save_user, authenticate_user
 from config import *
 
 
@@ -15,21 +15,25 @@ def main():
     # セッションステートの初期化
     initialize_session_state()
 
-    # タイトルの設定
-    st.title(DEFAULT_TITLE)
+    if st.session_state.logged_in:
+        # タイトルの設定
+        st.title(DEFAULT_TITLE)
 
-    # APIキーとモデル選択の設定
-    setup_sidebar()
+        # APIキーとモデル選択の設定
+        setup_sidebar()
 
-    # LLMのインスタンス化
-    llm = LLM(model_provider=PROVIDER, model_name=MODEL, temperature=select_temperature, system_message=SYSTEM)
+        # LLMのインスタンス化
+        llm = LLM(model_provider=PROVIDER, model_name=MODEL, temperature=select_temperature, system_message=SYSTEM)
 
-    # メインの処理
-    conversation_id = st.session_state.get('selected_conversation_id', 'default')
-    if conversation_id != 'default':
-        process_conversation(conversation_id, llm)
+        # メインの処理
+        conversation_id = st.session_state.get('selected_conversation_id', 'default')
+        if conversation_id != 'default':
+            process_conversation(conversation_id, llm)
+        else:
+            st.write("""サイドバーから"New Chat"をクリックするか、"History"を開き、過去の会話を選択してください。""")   
     else:
-        st.write("""サイドバーから"New Chat"をクリックするか、"History"を開き、過去の会話を選択してください。""")
+        login()
+
 
 def load_model_config():
     """model.yamlからモデル設定を読み込む"""
@@ -94,14 +98,52 @@ def process_user_input(user_input, llm):
 
 def save_messages(user_input, assistant_msg, caption, conversation_id):
     """メッセージの保存と表示"""
-    save_message("User", user_input, "", conversation_id)
-    save_message("Assistant", assistant_msg, caption, conversation_id)
+    user_id = st.session_state.user_id
+    save_message("User", user_input, "", conversation_id, user_id)
+    save_message("Assistant", assistant_msg, caption, conversation_id, user_id)
 
 def initialize_session_state():
     if 'chat_log' not in st.session_state:
         st.session_state.chat_log = []
     if 'selected_conversation_id' not in st.session_state:
         st.session_state.selected_conversation_id = 'default'
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+
+def login():
+    st.title("ログイン")
+    username = st.text_input("ユーザー名")
+    password = st.text_input("パスワード", type="password")
+    if st.button("ログイン"):
+        if authenticate_user(username, password):
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.user_id = get_user_id(username)
+            st.success("ログインに成功しました")
+            st.rerun()
+        else:
+            st.error("ユーザー名またはパスワードが間違っています")
+    with st.expander("新規登録"):
+        register()
+
+def logout():
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.username = None
+        st.session_state.user_id = None
+        st.rerun()
+
+def register():
+    st.title("新規登録")
+    username = st.text_input("新しいユーザー名")
+    password = st.text_input("新しいパスワード", type="password")
+    if st.button("登録"):
+        if get_user(username):
+            st.error("このユーザー名は既に使用されています")
+        else:
+            save_user(username, password)
+            st.success("ユーザー登録に成功しました。ログインしてください。")
+
 
 def setup_sidebar():
     model_config = load_model_config()
@@ -110,6 +152,8 @@ def setup_sidebar():
     else:
         st.error("モデル設定の読み込みに失敗しました。")
     with st.sidebar:
+        if st.button("New Chat", key="new"):
+            st.session_state.selected_conversation_id = str(uuid.uuid4())
         display_conversation_history()
         global OPENAI_API_KEY, ANTHROPIC_API_KEY, PROVIDER, MODEL, MAX_TOKENS, select_temperature
         user_openai_api_key = st.sidebar.text_input("OpenAI API key", OPENAI_API_KEY, type="password")
@@ -125,12 +169,12 @@ def setup_sidebar():
             if PROVIDER == provider:
                 MODEL = st.sidebar.selectbox("Model", models[provider])
         select_temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
+        logout()
 
 def display_conversation_history():
-    if st.button("New Chat", key="new"):
-        st.session_state.selected_conversation_id = str(uuid.uuid4())
     with st.expander("History"):
-        for conversation_id, timestamp in sorted(get_conversations(), key=lambda x: x[1], reverse=True):
+        user_id = st.session_state.user_id
+        for conversation_id, timestamp in sorted(get_conversations(user_id), key=lambda x: x[1], reverse=True):
             formatted_timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
             with st.container(border=True):
                 st.subheader(formatted_timestamp, divider="rainbow")

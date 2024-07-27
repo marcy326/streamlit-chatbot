@@ -1,4 +1,5 @@
 # database.py
+import bcrypt
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -16,16 +17,61 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True)
     conversation_id = Column(String, index=True)
+    user_id = Column(String, index=True)
     sender = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     caption = Column(Text)
     timestamp = Column(DateTime, default=current_time_jst)
     summary = Column(Text, nullable=True)
 
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+
 engine = create_engine('sqlite:///chat_history.db')
 Session = sessionmaker(bind=engine)
 
 Base.metadata.create_all(engine)
+
+def hash_password(password):
+    """パスワードをハッシュ化する"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def check_password(hashed_password, plain_password):
+    """ハッシュ化されたパスワードと平文のパスワードを比較する"""
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+
+def save_user(username, password):
+    session = Session()
+    hashed_password = hash_password(password)
+    new_user = User(username=username, password=hashed_password)
+    session.add(new_user)
+    session.commit()
+    session.close()
+
+def get_user(username):
+    session = Session()
+    user = session.query(User).filter(User.username == username).first()
+    session.close()
+    return user
+
+def get_user_id(username):
+    """指定されたユーザー名に基づいてユーザーIDを取得する"""
+    session = Session()
+    user = session.query(User).filter(User.username == username).first()
+    session.close()
+    if user:
+        return user.id
+    return None
+
+def authenticate_user(username, password):
+    user = get_user(username)
+    if user and check_password(user.password, password):
+        return True
+    return False
 
 def save_conversation(conversation_id, messages):
     """特定の会話IDに属するメッセージリストをデータベースに保存する関数"""
@@ -36,19 +82,21 @@ def save_conversation(conversation_id, messages):
     session.commit()
     session.close()
 
-def get_conversations():
+def get_conversations(user_id):
     session = Session()
     conversations = session.query(
         Message.conversation_id,
         func.max(Message.timestamp).label("latest_timestamp")
+    ).filter(
+        Message.user_id == user_id,
     ).group_by(Message.conversation_id).order_by(func.max(Message.timestamp).desc()).all()
     session.close()
     return [(c.conversation_id, c.latest_timestamp) for c in conversations]
 
-def save_message(sender, message, caption, conversation_id):
+def save_message(sender, message, caption, conversation_id, user_id):
     """Save a message to the database."""
     session = Session()
-    new_message = Message(sender=sender, message=message, caption=caption, conversation_id=conversation_id)
+    new_message = Message(sender=sender, message=message, caption=caption, conversation_id=conversation_id, user_id=user_id)
     session.add(new_message)
     session.commit()
     session.close()
