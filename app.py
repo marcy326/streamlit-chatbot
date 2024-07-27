@@ -107,7 +107,6 @@ def setup_sidebar():
     model_config = load_model_config()
     if model_config is not None:
         providers, models = create_provider_and_model_lists(model_config)
-        st.write("モデル設定が正常に読み込まれました。")
     else:
         st.error("モデル設定の読み込みに失敗しました。")
     with st.sidebar:
