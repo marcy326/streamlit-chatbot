@@ -125,6 +125,7 @@ def setup_sidebar():
         for provider in providers:
             if PROVIDER == provider:
                 MODEL = st.sidebar.selectbox("Model", models[provider])
+        select_temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
 
 def display_conversation_history():
     if st.button("New Chat", key="new"):
