@@ -1,5 +1,7 @@
 # Streamlit ChatBot App
 
+https://app-chatbot-marcy.streamlit.app/
+
 This is a simple chatbot application built with Streamlit, which allows users to interact with a language model (LLM) powered by either OpenAI or Anthropic.
 
 ## Features
