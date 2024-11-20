@@ -3,8 +3,8 @@ import os
 from time import time
 import uuid
 import yaml
-
 import streamlit as st
+from pydantic import ValidationError
 
 from llm import LLM, summarize
 from database import get_conversations, save_message, load_messages_by_conversation_id, save_summary, get_summary, delete_conversation, get_user, get_user_id, save_user, authenticate_user
@@ -22,15 +22,25 @@ def main():
         # APIキーとモデル選択の設定
         setup_sidebar()
 
-        # LLMのインスタンス化
-        llm = LLM(model_provider=PROVIDER, model_name=MODEL, temperature=select_temperature, system_message=SYSTEM)
-
-        # メインの処理
-        conversation_id = st.session_state.get('selected_conversation_id', 'default')
-        if conversation_id != 'default':
-            process_conversation(conversation_id, llm)
+        if ((st.session_state.provider == "OpenAI" and not st.session_state.openai_api_key) 
+            or (st.session_state.provider == "Anthropic" and not st.session_state.anthropic_api_key)):
+            st.error("APIキーが設定されていません。サイドバーでAPIキーを入力してください。")
         else:
-            st.write("""サイドバーから"New Chat"をクリックするか、"History"を開き、過去の会話を選択してください。""")   
+            # LLMのインスタンス化
+            llm = LLM(
+                model_provider=st.session_state.provider, 
+                model_name=st.session_state.model, 
+                system_message=SYSTEM, 
+                openai_api_key=st.session_state.openai_api_key,
+                anthropic_api_key=st.session_state.anthropic_api_key
+            )
+            # メインの処理
+            conversation_id = st.session_state.get('selected_conversation_id', 'default')
+            if conversation_id != 'default':
+                process_conversation(conversation_id, llm)
+            else:
+                st.write("""サイドバーから"New Chat"をクリックするか、"History"を開き、過去の会話を選択してください。""")
+    
     else:
         login()
 
@@ -109,6 +119,14 @@ def initialize_session_state():
         st.session_state.selected_conversation_id = 'default'
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
+    if 'openai_api_key' not in st.session_state:
+        st.session_state.openai_api_key = ""
+    if 'anthropic_api_key' not in st.session_state:
+        st.session_state.anthropic_api_key = ""
+    if 'provider' not in st.session_state:
+        st.session_state.provider = PROVIDER
+    if 'model' not in st.session_state:
+        st.session_state.model = MODEL
 
 def login():
     st.title("ログイン")
@@ -131,6 +149,12 @@ def logout():
         st.session_state.logged_in = False
         st.session_state.username = None
         st.session_state.user_id = None
+        st.session_state.chat_log = []
+        st.session_state.selected_conversation_id = 'default'
+        st.session_state.openai_api_key = ""
+        st.session_state.anthropic_api_key = ""
+        st.session_state.provider = PROVIDER
+        st.session_state.model = MODEL
         st.rerun()
 
 def register():
@@ -151,24 +175,34 @@ def setup_sidebar():
         providers, models = create_provider_and_model_lists(model_config)
     else:
         st.error("モデル設定の読み込みに失敗しました。")
+
     with st.sidebar:
         if st.button("New Chat", key="new"):
             st.session_state.selected_conversation_id = str(uuid.uuid4())
         display_conversation_history()
-        global OPENAI_API_KEY, ANTHROPIC_API_KEY, PROVIDER, MODEL, MAX_TOKENS, select_temperature
-        user_openai_api_key = st.sidebar.text_input("OpenAI API key", OPENAI_API_KEY, type="password")
-        user_anthropic_api_key = st.sidebar.text_input("Anthropic API key", ANTHROPIC_API_KEY, type="password")
-        if user_openai_api_key is not None:
-            os.environ["OPENAI_API_KEY"] = user_openai_api_key
-            OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-        if user_anthropic_api_key is not None:
-            os.environ["ANTHROPIC_API_KEY"] = user_anthropic_api_key
-            ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-        PROVIDER = st.sidebar.selectbox("Provider", providers, index=1)
-        for provider in providers:
-            if PROVIDER == provider:
-                MODEL = st.sidebar.selectbox("Model", models[provider])
-        select_temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
+        
+        # APIキーの入力フィールド
+        user_openai_api_key = st.sidebar.text_input("OpenAI API key", st.session_state.openai_api_key, type="password")
+
+        # 入力されたAPIキーをセッションステートに保存
+        if user_openai_api_key:
+            st.session_state.openai_api_key = user_openai_api_key
+        if not st.session_state.openai_api_key:
+            st.error("OpenAI API keyが設定されていません。")
+
+        user_anthropic_api_key = st.sidebar.text_input("Anthropic API key", st.session_state.anthropic_api_key, type="password")
+        
+        if user_anthropic_api_key:
+            st.session_state.anthropic_api_key = user_anthropic_api_key
+        if not st.session_state.anthropic_api_key:
+            st.error("Anthropic API keyが設定されていません。")
+
+        provider = st.sidebar.selectbox("Provider", providers, index=1)
+        st.session_state.provider = provider
+        
+        model = st.sidebar.selectbox("Model", models[provider])
+        st.session_state.model = model
+        
         logout()
 
 def display_conversation_history():

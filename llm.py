@@ -13,11 +13,13 @@ USER_NAME = "user"
 ASSISTANT_NAME = "assistant"
 
 class LLM:
-    def __init__(self, model_provider="OpenAI", model_name="gpt-3.5-turbo", temperature=0, system_message=""):
+    def __init__(self, model_provider="OpenAI", model_name="gpt-3.5-turbo", temperature=0, system_message="", openai_api_key=None, anthropic_api_key=None):
         self.model_provider = model_provider
         self.model_name = model_name
         self.temperature = temperature
         self.system_message = system_message
+        self.openai_api_key = openai_api_key
+        self.anthropic_api_key = anthropic_api_key
         # ここでメモリの初期化を行う
         self.state = {"memory": ConversationBufferWindowMemory(k=10, return_messages=True, memory_key="chat_history")}
         self.prompt = self.__setting_prompt()
@@ -37,9 +39,10 @@ class LLM:
         # モデルの設定
         if self.model_provider == "OpenAI":
             ChatModel = ChatOpenAI
+            model = ChatModel(model_name=self.model_name, temperature=self.temperature, streaming=True, openai_api_key=self.openai_api_key)
         elif self.model_provider == "Anthropic":
             ChatModel = ChatAnthropic
-        model = ChatModel(model_name=self.model_name, temperature=self.temperature, streaming=True)
+            model = ChatModel(model_name=self.model_name, temperature=self.temperature, streaming=True, anthropic_api_key=self.anthropic_api_key)
         return model
     
     def __setting_chain(self):
